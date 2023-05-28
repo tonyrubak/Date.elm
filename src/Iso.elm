@@ -2,7 +2,6 @@ module Iso exposing (..)
 
 import DateTypes exposing (..)
 import Parser exposing (Parser, (|.), (|=), getChompedString, chompIf, succeed)
-import Date exposing (isLeapYear)
 
 isoCalendar : Calendar
 isoCalendar =

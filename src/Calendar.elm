@@ -1,6 +1,6 @@
 module Calendar exposing (..)
 
-import Date exposing (..)
+import Date
 import DateTypes exposing (DateTime)
 import List.Extra as List
 
