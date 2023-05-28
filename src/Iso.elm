@@ -11,6 +11,8 @@ isoCalendar =
     , isLeapYear = isLeapYear
     , daysInMonth = daysInMonth
     , monthsInYear = monthsInYear
+    , addDays = addDays
+    , diff = diff
     }
 
 daysPerNonleapYear : Int
@@ -56,6 +58,19 @@ monthsInYear : Int -> Int
 monthsInYear _ =
     12
 
+addDays : Int -> Int -> Int -> Int -> (Int, Int, Int)
+addDays days year month day =
+    dateToIsoDays year month day
+    |> (+) days
+    |> dateFromIsoDays
+
+diff : (Int, Int, Int) -> (Int, Int, Int) -> Int
+diff (year1, month1, day1) (year2, month2, day2) =
+    let
+        days1 = dateToIsoDays year1 month1 day1
+        days2 = dateToIsoDays year2 month2 day2
+    in
+        days2 - days1
 
 daysInPreviousYears : Int -> Int
 daysInPreviousYears year =

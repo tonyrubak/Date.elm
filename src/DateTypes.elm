@@ -25,4 +25,6 @@ type alias Calendar =
     , isLeapYear : Int -> Bool
     , daysInMonth : Int -> Int -> Int
     , monthsInYear : Int -> Int
+    , addDays : Int -> Int -> Int -> Int -> (Int, Int, Int)
+    , diff : (Int, Int, Int) -> (Int, Int, Int) -> Int
     }
