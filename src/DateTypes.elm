@@ -20,4 +20,9 @@ type alias DateTime =
 
 type alias Calendar =
     { dayOfWeek : Int -> Int -> Int -> (Int, Int, Int)
+    , daysBeforeMonth : Int -> Int
+    , leapDayOffset : Int -> Int -> Int
+    , isLeapYear : Int -> Bool
+    , daysInMonth : Int -> Int -> Int
+    , monthsInYear : Int -> Int
     }

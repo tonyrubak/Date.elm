@@ -2,10 +2,17 @@ module Iso exposing (..)
 
 import DateTypes exposing (..)
 import Parser exposing (Parser, (|.), (|=), getChompedString, chompIf, succeed)
+import Date exposing (isLeapYear)
 
 isoCalendar : Calendar
 isoCalendar =
-    { dayOfWeek = dayOfWeek }
+    { dayOfWeek = dayOfWeek
+    , daysBeforeMonth = daysBeforeMonth
+    , leapDayOffset = leapDayOffset
+    , isLeapYear = isLeapYear
+    , daysInMonth = daysInMonth
+    , monthsInYear = monthsInYear
+    }
 
 daysPerNonleapYear : Int
 daysPerNonleapYear = 365
@@ -33,6 +40,22 @@ dateFromIsoDays days =
         (month, dayInMonth) = yearDayToYearDate extraDay dayOfYear
     in
     (year, month, (dayInMonth + 1))
+
+daysInMonth : Int -> Int -> Int
+daysInMonth year month =
+    if month == 2 then
+        if isLeapYear year then
+            29
+        else
+            28
+    else if List.member month [4,6,9,11] then
+        30
+    else
+        31
+
+monthsInYear : Int -> Int
+monthsInYear _ =
+    12
 
 
 daysInPreviousYears : Int -> Int
@@ -124,7 +147,7 @@ dayOfWeek year month day =
 
 isoDaysToDayOfWeek : Int -> Int
 isoDaysToDayOfWeek isoDays =
-    1 + remainderBy isoDays 7
+    1 + (remainderBy 7 <| isoDays + 5)
 
 -- Parsing String Dates to Date Objects
 dateFromParts : DateParts -> Date

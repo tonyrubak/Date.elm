@@ -61,25 +61,36 @@ defaultOptions =
     , preferredDateTimeInvoked = False
     }
 
-parse : String -> DateTime -> FormatOptions -> List Char -> String
-parse stringFormat dateTime formatOptions acc =
-    case String.toList stringFormat of
-        [] ->
-            String.fromList <| List.reverse acc
-        '%' :: rest ->
-            parseModifiers (String.fromList rest) Nothing Nothing (dateTime, formatOptions, acc)
-        c :: rest ->
-            parse (String.fromList rest) dateTime formatOptions (c :: acc)
+type ParseError
+    = Invalid
+    | InvalidFormatSpecifier
 
-parseModifiers : String -> Maybe Int -> Maybe Char -> (DateTime, FormatOptions, List Char) -> String
+parse : String -> DateTime -> FormatOptions -> Result ParseError String
+parse stringFormat dateTime formatOptions =
+    doParse (String.toList stringFormat) dateTime formatOptions []
+        |> Result.map List.reverse
+        |> Result.map List.concat
+        |> Result.map String.fromList
+
+doParse : List Char -> DateTime -> FormatOptions -> List (List Char) -> Result ParseError (List (List Char))
+doParse stringFormat dateTime formatOptions acc =
+    case stringFormat of
+        [] ->
+            Ok acc
+        '%' :: rest ->
+            parseModifiers rest Nothing Nothing (dateTime, formatOptions, acc)
+        c :: rest ->
+            doParse rest dateTime formatOptions ([ c ] :: acc)
+
+parseModifiers : List Char -> Maybe Int -> Maybe Char -> (DateTime, FormatOptions, List (List Char)) -> Result ParseError (List (List Char))
 parseModifiers stringFormat width pad ((dateTime, formatOptions, acc) as parser)  =
-    case String.toList stringFormat of
+    case stringFormat of
         '-' :: rest ->
-            parseModifiers (String.fromList rest) width Nothing parser
+            parseModifiers rest width Nothing parser
         '0' :: rest ->
-            parseModifiers (String.fromList rest) width (Just '0') parser
+            parseModifiers rest width (Just '0') parser
         '_' :: rest ->
-            parseModifiers (String.fromList rest) width (Just ' ') parser
+            parseModifiers rest width (Just ' ') parser
         c :: rest ->
             if Char.isDigit c then
                 let
@@ -90,15 +101,17 @@ parseModifiers stringFormat width pad ((dateTime, formatOptions, acc) as parser)
                             Just w ->
                                 w + Char.toCode c
                 in
-                parseModifiers (String.fromList rest) (Just newWidth) pad parser
+                parseModifiers rest (Just newWidth) pad parser
             else
                 case (pad, width) of
                     (Nothing, _) ->
-                        parseModifiers (String.fromList <| c :: rest) width (Just <| defaultPad c) parser
+                        parseModifiers (c :: rest) width (Just <| defaultPad c) parser
                     (_, Nothing) ->
-                        parseModifiers (String.fromList <| c :: rest) (Just <| defaultWidth c) pad parser
+                        parseModifiers (c :: rest) (Just <| defaultWidth c) pad parser
                     (Just somePad, Just someWidth) ->
-                        String.fromList <| formatModifiers (c :: rest) someWidth somePad dateTime formatOptions acc
+                        formatModifiers (c :: rest) someWidth somePad dateTime formatOptions acc
+        rest ->
+            doParse rest dateTime formatOptions acc
 
 defaultPad : Char -> Char
 defaultPad format =
@@ -118,22 +131,120 @@ defaultWidth format =
     else
         0
 
-formatModifiers : List Char -> Int -> Char -> DateTime -> FormatOptions -> List Char -> String
+
+formatModifiers : List Char -> Int -> Char -> DateTime -> FormatOptions -> List (List Char) -> Result ParseError (List (List Char))
 formatModifiers format width pad dateTime formatOptions acc =
     case format of
         '%' :: rest ->
-            parse (String.fromList rest) dateTime formatOptions (padLeading width pad "%" ++ acc)
+            doParse rest dateTime formatOptions ( (padLeading width pad "%") :: acc)
         'a' :: rest ->
             let
                 result =
                     dateTime
                     |> (\dt -> Date.dayOfWeek dt.date)
                     |> formatOptions.abbreviatedDayOfWeekNames
+                    |> (Maybe.map <| padLeading width pad)
+            in
+            case result of
+                Just someChar ->
+                    doParse rest dateTime formatOptions (someChar :: acc)
+                Nothing ->
+                    Err Invalid
+        'A' :: rest ->
+            let
+                result =
+                    dateTime
+                    |> (\dt -> Date.dayOfWeek dt.date)
+                    |> formatOptions.dayOfWeekNames
+                    |> (Maybe.map <| padLeading width pad)
+            in
+            case result of
+                Just someChar ->
+                    doParse rest dateTime formatOptions (someChar :: acc)
+                Nothing ->
+                    Err Invalid
+        'b' :: rest ->
+            let
+                result =
+                    dateTime
+                    |> (\dt -> Date.dayOfWeek dt.date)
+                    |> formatOptions.abbreviatedMonthNames
+                    |> (Maybe.map <| padLeading width pad)
+            in
+            case result of
+                Just someChar ->
+                    doParse rest dateTime formatOptions (someChar :: acc)
+                Nothing ->
+                    Err Invalid
+        'B' :: rest ->
+            let
+                result =
+                    dateTime
+                    |> (\dt -> Date.dayOfWeek dt.date)
+                    |> formatOptions.monthNames
+                    |> (Maybe.map <| padLeading width pad)
+            in
+            case result of
+                Just someChar ->
+                    doParse rest dateTime formatOptions (someChar :: acc)
+                Nothing ->
+                    Err Invalid
+        'd' :: rest ->
+            let
+                result =
+                    dateTime
+                    |> (\dt -> dt.date.day)
+                    |> String.fromInt
                     |> padLeading width pad
             in
-            parse (String.fromList rest) dateTime formatOptions (result ++ acc)
+            doParse rest dateTime formatOptions (result :: acc)
+        'j' :: rest ->
+            let
+                result =
+                    dateTime
+                    |> (\dt -> Date.dayOfYear dt.date)
+                    |> String.fromInt
+                    |> padLeading width pad
+            in
+            doParse rest dateTime formatOptions (result :: acc)
+        'm' :: rest ->
+            let
+                result =
+                    dateTime
+                    |> (\dt -> dt.date.month)
+                    |> String.fromInt
+                    |> padLeading width pad
+            in
+            doParse rest dateTime formatOptions (result :: acc)
+        'u' :: rest ->
+            let
+                result =
+                    dateTime
+                    |> (\dt -> Date.dayOfWeek dt.date)
+                    |> String.fromInt
+                    |> padLeading width pad
+            in
+            doParse rest dateTime formatOptions (result :: acc)
+        'y' :: rest ->
+            let
+                result =
+                    dateTime
+                    |> (\dt -> remainderBy 100 dt.date.year)
+                    |> String.fromInt
+                    |> padLeading width pad
+            in
+            doParse rest dateTime formatOptions (result :: acc)
+        'Y' :: rest ->
+            let
+                result =
+                    dateTime
+                    |> (\dt -> dt.date.year)
+                    |> String.fromInt
+                    |> padLeading width pad
+            in
+            doParse rest dateTime formatOptions (result :: acc)
         _ ->
-            parse (String.fromList format) dateTime formatOptions acc
+            Err InvalidFormatSpecifier
 
 padLeading : Int -> Char -> String -> List Char
 padLeading count padding string =
