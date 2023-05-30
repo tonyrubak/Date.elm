@@ -1,4 +1,4 @@
-module Iso exposing (..)
+module Iso exposing (isoCalendar)
 
 import DateTypes exposing (..)
 import Parser exposing (Parser, (|.), (|=), getChompedString, chompIf, succeed)

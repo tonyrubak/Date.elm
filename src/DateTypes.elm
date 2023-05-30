@@ -14,8 +14,8 @@ type alias Time =
     }
 
 type alias DateTime =
-    { date: Date
-    , time: Time
+    { date : Date
+    , time : Time
     }
 
 type alias Calendar =

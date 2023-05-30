@@ -42,5 +42,3 @@ add days ({ calendar, year, month, day } as date) =
 diff : Calendar -> Date -> Date -> Int
 diff calendar day1 day2 =
     calendar.diff (day1.year, day1.month, day1.day) (day2.year, day2.month, day2.day)
-
--- Date/ISO Days Conversion
